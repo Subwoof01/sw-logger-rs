@@ -1,7 +1,13 @@
 [package]
-name = "logger"
-version = "0.1.0"
+name = "logger-rs"
+version = "1.0.0"
 edition = "2021"
+authors = ["subwoofy"]
+description = "Simple logger for Rust"
+license = "CC0"
+homepage = "https://github.com/Subwoof01/logger-rs"
+repository = "https://github.com/Subwoof01/logger-rs"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
