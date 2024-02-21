@@ -8,10 +8,10 @@ lazy_static! {
     static ref LOG_PATH: Mutex<String> = Mutex::new(String::new());
 }
 
-/// `Verbose`    -> Logs all messages, regardless of `LogType`.
+/// `Verbose`    -> Logs all messages, regardless of `LogType`.  
 /// `Debug`      -> Logs messages marked as `LogType::Error`, `LogType::Warning` and
-///                 `LogType::Debug`.
-/// `Default`    -> Logs messages marked as `LogType::Error` and `LogType::Warning`.
+///                 `LogType::Debug`.  
+/// `Default`    -> Logs messages marked as `LogType::Error` and `LogType::Warning`.  
 /// `ErrorsOnly` -> Only logs messages marked as `LogType::Error`.
 #[derive(Debug, PartialEq, Clone)]
 pub enum LogLevel {
