@@ -52,7 +52,25 @@ pub fn set_path(path: String) {
     *LOG_PATH.lock().unwrap() = path;
 }
 
-pub fn log(message: &str, t: LogType) -> Result<String, std::io::Error> {
+/// Log a message to stdout and, optionally, a file.
+/// This function will format the message with a type-signifier and the timestamp of the moment of
+/// logging.
+///
+/// Example:  
+/// ```
+/// [WARNING] 2024-02-21 12:05:51 -> This is a logged message!
+/// ```
+///
+/// `message` -> the message to print.
+/// `t`       -> the `LogType` to use. Defines both the type-signifier in the stdout/file and
+/// whether this message should be logged at all, depending on the global `LogLevel` set.  
+/// p         -> A custom path for the logger to write this message to. When `None` the logger will
+/// write to the default path set with `set_path`. A custom path can be specified like so:
+/// `Some("/the/path/here")`.
+pub fn log(message: &str, t: LogType, p: Option<&str>) -> Result<String, std::io::Error> {
+    let default_path = LOG_PATH.lock().unwrap().clone();
+    let path = p.unwrap_or(&default_path);
+
     let timestamp = Local::now();
     let formatted_timestamp = timestamp.format("%Y-%m-%d %H:%M:%S");
 
@@ -88,9 +106,7 @@ pub fn log(message: &str, t: LogType) -> Result<String, std::io::Error> {
         _ => println!("{}", formatted_message),
     }
 
-    let path = LOG_PATH.lock().unwrap().clone();
-
-    if path != "" {
+    if path != String::new() {
         let mut file = OpenOptions::new().append(true).create(true).open(&path)?;
         writeln!(file, "{}", &formatted_message)?;
     }
@@ -126,23 +142,34 @@ mod tests {
     #[test]
     fn calling_set_path_sets_path() {
         set_path(String::from(
-            "/home/jordan/projects/rust/logger/target/debug/test/log.txt",
+            "/home/jordan/projects/rust/logger/target/debug/test/test.log",
         ));
         assert_eq!(
             *LOG_PATH.lock().unwrap(),
-            "/home/jordan/projects/rust/logger/target/debug/test/log.txt"
+            "/home/jordan/projects/rust/logger/target/debug/test/test.log"
         );
     }
 
     #[test]
-    fn log_writes_to_file() {
+    fn log_writes_to_default_file() {
         set_path(String::from(
-            "/home/jordan/projects/rust/logger/target/debug/test/log.txt",
+            "/home/jordan/projects/rust/logger/target/debug/test/test.log",
         ));
 
         let path = LOG_PATH.lock().unwrap().clone();
 
-        let logged_message = log("This is a test", LogType::Error).unwrap();
+        let logged_message = log("This is a test", LogType::Error, None).unwrap();
+        assert!(
+            check_string_in_file(&path, &logged_message),
+            "Did not find test string in log file."
+        );
+    }
+
+    #[test]
+    fn log_writes_to_custom_file() {
+        let path = "/home/jordan/projects/rust/logger/target/debug/test/custom.log";
+
+        let logged_message = log("This is a test", LogType::Error, Some(path)).unwrap();
         assert!(
             check_string_in_file(&path, &logged_message),
             "Did not find test string in log file."
@@ -152,19 +179,19 @@ mod tests {
     #[test]
     fn log_level_debug_does_not_log_info() {
         set_path(String::from(
-            "/home/jordan/projects/rust/logger/target/debug/test/log.txt",
+            "/home/jordan/projects/rust/logger/target/debug/test/test.log",
         ));
         let path = LOG_PATH.lock().unwrap().clone();
         assert_eq!(
             &path,
-            "/home/jordan/projects/rust/logger/target/debug/test/log.txt"
+            "/home/jordan/projects/rust/logger/target/debug/test/test.log"
         );
 
         set_level(LogLevel::Debug);
         let log_level = LOG_LEVEL.lock().unwrap().clone();
         assert_eq!(log_level, LogLevel::Debug);
 
-        let logged_message = log("This shouldn't get logged", LogType::Info).unwrap();
+        let logged_message = log("This shouldn't get logged", LogType::Info, None).unwrap();
         assert_false!(
             check_string_in_file(&path, &logged_message),
             "Found test string in log file."
@@ -174,12 +201,12 @@ mod tests {
     #[test]
     fn log_level_error_only_prints_errors() {
         set_path(String::from(
-            "/home/jordan/projects/rust/logger/target/debug/test/log.txt",
+            "/home/jordan/projects/rust/logger/target/debug/test/test.log",
         ));
         let path = LOG_PATH.lock().unwrap().clone();
         assert_eq!(
             &path,
-            "/home/jordan/projects/rust/logger/target/debug/test/log.txt"
+            "/home/jordan/projects/rust/logger/target/debug/test/test.log"
         );
 
         set_level(LogLevel::ErrorsOnly);
@@ -188,25 +215,25 @@ mod tests {
 
         let path = LOG_PATH.lock().unwrap().clone();
 
-        let mut logged_message = log("This shouldn't get logged (errors_only).", LogType::Info).unwrap();
+        let mut logged_message = log("This shouldn't get logged (errors_only).", LogType::Info, None).unwrap();
         assert_false!(
             check_string_in_file(&path, &logged_message),
             "Found INFO test string in log file."
         );
 
-        logged_message = log("This shouldn't get logged (errors_only).", LogType::Debug).unwrap();
+        logged_message = log("This shouldn't get logged (errors_only).", LogType::Debug, None).unwrap();
         assert_false!(
             check_string_in_file(&path, &logged_message),
             "Found DEBUG test string in log file."
         );
 
-        logged_message = log("This shouldn't get logged (errors_only).", LogType::Warning).unwrap();
+        logged_message = log("This shouldn't get logged (errors_only).", LogType::Warning, None).unwrap();
         assert_false!(
             check_string_in_file(&path, &logged_message),
             "Found WARNING test string in log file."
         );
 
-        logged_message = log("This should get logged (errors_only).", LogType::Error).unwrap();
+        logged_message = log("This should get logged (errors_only).", LogType::Error, None).unwrap();
         assert!(
             check_string_in_file(&path, &logged_message),
             "Did not find ERROR test string in log file."
@@ -216,12 +243,12 @@ mod tests {
     #[test]
     fn log_level_verbose_prints_everything() {
         set_path(String::from(
-            "/home/jordan/projects/rust/logger/target/debug/test/log.txt",
+            "/home/jordan/projects/rust/logger/target/debug/test/test.log",
         ));
         let path = LOG_PATH.lock().unwrap().clone();
         assert_eq!(
             &path,
-            "/home/jordan/projects/rust/logger/target/debug/test/log.txt"
+            "/home/jordan/projects/rust/logger/target/debug/test/test.log"
         );
 
         set_level(LogLevel::Verbose);
@@ -230,25 +257,25 @@ mod tests {
 
         let path = LOG_PATH.lock().unwrap().clone();
 
-        let mut logged_message = log("This should get logged (verbose).", LogType::Info).unwrap();
+        let mut logged_message = log("This should get logged (verbose).", LogType::Info, None).unwrap();
         assert!(
             check_string_in_file(&path, &logged_message),
             "Did not find INFO test string in log file."
         );
 
-        logged_message = log("This should get logged (verbose).", LogType::Debug).unwrap();
+        logged_message = log("This should get logged (verbose).", LogType::Debug, None).unwrap();
         assert!(
             check_string_in_file(&path, &logged_message),
             "Did not find DEBUG test string in log file."
         );
 
-        logged_message = log("This should get logged (verbose).", LogType::Warning).unwrap();
+        logged_message = log("This should get logged (verbose).", LogType::Warning, None).unwrap();
         assert!(
             check_string_in_file(&path, &logged_message),
             "Did not find WARNING test string in log file."
         );
 
-        logged_message = log("This should get logged (verbose).", LogType::Error).unwrap();
+        logged_message = log("This should get logged (verbose).", LogType::Error, None).unwrap();
         assert!(
             check_string_in_file(&path, &logged_message),
             "Did not find ERROR test string in log file."
@@ -258,12 +285,12 @@ mod tests {
     #[test]
     fn log_level_default_does_not_log_info_debug() {
         set_path(String::from(
-            "/home/jordan/projects/rust/logger/target/debug/test/log.txt",
+            "/home/jordan/projects/rust/logger/target/debug/test/test.log",
         ));
         let path = LOG_PATH.lock().unwrap().clone();
         assert_eq!(
             &path,
-            "/home/jordan/projects/rust/logger/target/debug/test/log.txt"
+            "/home/jordan/projects/rust/logger/target/debug/test/test.log"
         );
 
         set_level(LogLevel::Default);
@@ -272,26 +299,26 @@ mod tests {
 
         let path = LOG_PATH.lock().unwrap().clone();
 
-        let mut logged_message = log("This shouldn't get logged (default).", LogType::Info).unwrap();
+        let mut logged_message = log("This shouldn't get logged (default).", LogType::Info, None).unwrap();
         assert_false!(
             check_string_in_file(&path, &logged_message),
             "Found INFO test string in log file."
         );
 
-        logged_message = log("This shouldn't get logged (default).", LogType::Debug).unwrap();
+        logged_message = log("This shouldn't get logged (default).", LogType::Debug, None).unwrap();
         println!("Logged message: \n{}", logged_message);
         assert_false!(
             check_string_in_file(&path, &logged_message),
             "Found DEBUG test string in log file."
         );
 
-        logged_message = log("This should get logged (default).", LogType::Warning).unwrap();
+        logged_message = log("This should get logged (default).", LogType::Warning, None).unwrap();
         assert!(
             check_string_in_file(&path, &logged_message),
             "Did not find WARNING test string in log file."
         );
 
-        logged_message = log("This should get logged (default).", LogType::Error).unwrap();
+        logged_message = log("This should get logged (default).", LogType::Error, None).unwrap();
         assert!(
             check_string_in_file(&path, &logged_message),
             "Did not find ERROR test string in log file."
