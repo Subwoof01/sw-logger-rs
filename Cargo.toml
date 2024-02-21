@@ -1,12 +1,12 @@
 [package]
-name = "sw-logger-rs"
+name = "sw-sw-logger-rs"
 version = "1.0.0"
 edition = "2021"
 authors = ["subwoofy"]
-description = "Simple logger for Rust"
+description = "Simple sw-logger for Rust"
 license = "CC0-1.0"
-homepage = "https://github.com/Subwoof01/logger-rs"
-repository = "https://github.com/Subwoof01/logger-rs"
+homepage = "https://github.com/Subwoof01/sw-logger-rs"
+repository = "https://github.com/Subwoof01/sw-logger-rs"
 readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
