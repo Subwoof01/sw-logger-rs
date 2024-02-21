@@ -1,5 +1,5 @@
 [package]
-name = "logger-rs"
+name = "sw-logger-rs"
 version = "1.0.0"
 edition = "2021"
 authors = ["subwoofy"]
