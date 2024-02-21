@@ -12,11 +12,11 @@ fn main() {
 
 If logging to a file is not necessary, simply set the path to an empty string, like so:
 
-```
+```Rust
 sw_logger_rs::set_path("");
 ```
 
-Then to log to messages, call the `log()` function:
+Then to log messages, call the `log()` function:
 
 ```Rust
 use sw_logger_rs::*;
@@ -28,5 +28,7 @@ fn main() {
     log("This is a logged message!", LogType::Warning, None);
 }
 ```
+
+For clarity, opt to explicitly state the package name when calling `set_path()` and `set_level()`.
 
 To write the message to a different path than the default, change the `None` parameter to `Some("/custom/path/here")`.
